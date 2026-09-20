@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#3D7BFF" />
+    <title>Letter Blocks</title>
+  </head>
+  <body>
+    <div class="sky" aria-hidden="true">
+      <span class="cloud c1"></span>
+      <span class="cloud c2"></span>
+      <span class="cloud c3"></span>
+    </div>
+    <div class="hill" aria-hidden="true"></div>
+    <canvas id="confetti"></canvas>
+
+    <main id="app">
+      <section id="screen-start" class="screen" aria-hidden="false">
+        <p class="eyebrow">A to Z listening game</p>
+        <h1>Letter Blocks</h1>
+        <p class="lede">Listen. Then tap the letter you heard.</p>
+        <button id="play-btn" class="btn primary" type="button">Play</button>
+      </section>
+
+      <section id="screen-load" class="screen hidden" aria-hidden="true">
+        <div class="face idle" aria-hidden="true">
+          <span class="eye left"></span>
+          <span class="eye right"></span>
+          <span class="cheek left"></span>
+          <span class="cheek right"></span>
+          <span class="mouth"></span>
+        </div>
+        <p id="load-label">Waking up the voice…</p>
+        <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+          <span id="load-fill"></span>
+        </div>
+        <p id="load-error" class="error hidden"></p>
+        <button id="retry-btn" class="btn ghost hidden" type="button">Try again</button>
+      </section>
+
+      <section id="screen-play" class="screen hidden" aria-hidden="true">
+        <header class="hud">
+          <div id="beads" aria-hidden="true"></div>
+          <p id="scorechip">0 / 26</p>
+        </header>
+        <p id="prompt">Listen…</p>
+        <button id="face" class="face" type="button" aria-label="Hear it again">
+          <span class="eye left"></span>
+          <span class="eye right"></span>
+          <span class="cheek left"></span>
+          <span class="cheek right"></span>
+          <span class="mouth"></span>
+        </button>
+        <p class="hint">Tap the face to hear it again</p>
+        <div id="choices" class="choices"></div>
+      </section>
+
+      <section id="screen-score" class="screen hidden" aria-hidden="true">
+        <p class="eyebrow">First-try score</p>
+        <div id="stars" aria-hidden="true"></div>
+        <h2 id="final-score">0 / 26</h2>
+        <p id="final-note">Great listening.</p>
+        <button id="again-btn" class="btn primary" type="button">Play again</button>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

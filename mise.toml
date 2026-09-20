@@ -1,0 +1,18 @@
+[tools]
+node = "24.12.0"
+
+[tasks.setup]
+description = "Install JS packages and download the local Kokoro TTS model"
+run = "npm install && node scripts/fetch-model.mjs"
+
+[tasks.fetch-model]
+description = "Download Kokoro ONNX weights and ONNX Runtime WASM files"
+run = "node scripts/fetch-model.mjs"
+
+[tasks.dev]
+description = "Start the letter game"
+run = "npm run dev"
+
+[tasks.build]
+description = "Typecheck and build the static game"
+run = "npm run build"
