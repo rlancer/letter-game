@@ -75,25 +75,30 @@ export async function loadVoice(onProgress: (progress: LoadProgress) => void): P
   onProgress({ label: "Voice is ready!", percent: 100 });
 }
 
-async function getClip(text: string): Promise<string> {
-  const cached = clipCache.get(text);
-  if (cached) return cached;
+async function synthesize(phonemes: string) {
   if (!tts) throw new Error("Voice is not ready yet.");
+  const { input_ids } = tts.tokenizer(phonemes, { truncation: true });
+  return tts.generate_from_ids(input_ids, { voice: VOICE, speed: SPEED });
+}
 
-  const audio = await tts.generate(text, { voice: VOICE, speed: SPEED });
+async function getClip(phonemes: string): Promise<string> {
+  const cached = clipCache.get(phonemes);
+  if (cached) return cached;
+
+  const audio = await synthesize(phonemes);
   const url = URL.createObjectURL(audio.toBlob());
-  clipCache.set(text, url);
+  clipCache.set(phonemes, url);
   return url;
 }
 
-export async function prepareSpeech(text: string): Promise<void> {
-  await getClip(text);
+export async function prepareSpeech(phonemes: string): Promise<void> {
+  await getClip(phonemes);
 }
 
-export async function speak(text: string, onStart?: () => void): Promise<void> {
+export async function speak(phonemes: string, onStart?: () => void): Promise<void> {
   const token = (speakToken += 1);
   stopSpeaking();
-  const url = await getClip(text);
+  const url = await getClip(phonemes);
   if (token !== speakToken) return;
   const element = new Audio(url);
   playing = element;
@@ -115,6 +120,6 @@ export function stopSpeaking(): void {
   playing = null;
 }
 
-export function prefetch(text: string): void {
-  void getClip(text);
+export function prefetch(phonemes: string): void {
+  void getClip(phonemes);
 }

@@ -29,33 +29,35 @@ export const ALPHABET = [
 
 export type Letter = (typeof ALPHABET)[number];
 
-const LETTER_NAMES: Record<Letter, string> = {
-  A: "ay",
-  B: "bee",
-  C: "see",
-  D: "dee",
-  E: "ee",
-  F: "eff",
-  G: "jee",
-  H: "aitch",
-  I: "eye",
-  J: "jay",
-  K: "kay",
-  L: "ell",
-  M: "em",
-  N: "en",
-  O: "oh",
-  P: "pee",
-  Q: "cue",
-  R: "are",
-  S: "ess",
-  T: "tee",
-  U: "you",
-  V: "vee",
-  W: "double you",
-  X: "ex",
-  Y: "why",
-  Z: "zee",
+// Misaki US phonemes for American letter names. Kokoro was trained on these.
+// eSpeak turns spellings like "ay" into the letter I and "eff" into E-F-F.
+const LETTER_PHONEMES: Record<Letter, string> = {
+  A: "ˈA",
+  B: "bˈiː",
+  C: "sˈiː",
+  D: "dˈiː",
+  E: "ˈiː",
+  F: "ˈɛf",
+  G: "ʤˈiː",
+  H: "ˈAʧ",
+  I: "ˈI",
+  J: "ʤˈA",
+  K: "kˈA",
+  L: "ˈɛl",
+  M: "ˈɛm",
+  N: "ˈɛn",
+  O: "ˈO",
+  P: "pˈiː",
+  Q: "kjˈuː",
+  R: "ˈɑɹ",
+  S: "ˈɛs",
+  T: "tˈiː",
+  U: "jˈuː",
+  V: "vˈiː",
+  W: "dˈʌbəljˌuː",
+  X: "ˈɛks",
+  Y: "wˈI",
+  Z: "zˈiː",
 };
 
 const CONFUSABLES: Partial<Record<Letter, Letter[]>> = {
@@ -81,12 +83,9 @@ const CONFUSABLES: Partial<Record<Letter, Letter[]>> = {
 const BLOCK_COLORS = ["tomato", "ultramarine", "grape", "grass"] as const;
 export type BlockColor = (typeof BLOCK_COLORS)[number];
 
-export function letterName(letter: Letter): string {
-  return LETTER_NAMES[letter];
-}
-
 export function promptFor(letter: Letter): string {
-  return `Find the letter ${letterName(letter)}.`;
+  // Comma is a pause so "letter" does not glue an extra R onto A, E, I, O, R.
+  return `fˈInd ðə lˈɛɾɚ, ${LETTER_PHONEMES[letter]}.`;
 }
 
 export function colorFor(letter: Letter): BlockColor {
