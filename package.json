@@ -4,13 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "cf dev",
+    "build": "tsc && cf build",
     "preview": "vite preview",
     "fetch-model": "node scripts/fetch-model.mjs",
-    "setup": "npm install && node scripts/fetch-model.mjs"
+    "setup": "npm install && node scripts/fetch-model.mjs",
+    "deploy": "tsc && cf deploy"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.1",
+    "cf": "^1.0.0-beta.18",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   },

@@ -12,10 +12,14 @@ dist
 dist-ssr
 *.local
 .playwright-mcp
+.cloudflare
+.wrangler
+.dev.vars*
 public/models
 public/voices
 public/ort
 src/assets/ort
+
 
 # Editor directories and files
 .vscode/*

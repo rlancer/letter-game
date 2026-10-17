@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -10,7 +11,14 @@ const isolationHeaders = {
   "Cross-Origin-Embedder-Policy": "require-corp",
 };
 
+const htmlInputs = {
+  main: path.join(root, "index.html"),
+  admin: path.join(root, "admin.html"),
+  adminWords: path.join(root, "admin-words.html"),
+};
+
 export default defineConfig({
+  plugins: [cloudflare()],
   resolve: {
     alias: {
       path: empty,
@@ -31,12 +39,12 @@ export default defineConfig({
   worker: {
     format: "es",
   },
-  build: {
-    rollupOptions: {
-      input: {
-        main: path.join(root, "index.html"),
-        admin: path.join(root, "admin.html"),
-        adminWords: path.join(root, "admin-words.html"),
+  environments: {
+    client: {
+      build: {
+        rollupOptions: {
+          input: htmlInputs,
+        },
       },
     },
   },
