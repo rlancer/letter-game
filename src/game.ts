@@ -15,6 +15,21 @@ import {
 import { playCorrect, playFanfare, playTap, playWrong, unlockAudio } from "./sounds.ts";
 import { loadVoice, prefetch, prepareSpeech, speak, stopSpeaking } from "./tts.ts";
 import {
+  catalogFor,
+  choicesFor as mathChoicesFor,
+  colorForNumber,
+  deckFor,
+  finishNote,
+  finishStars,
+  MATH_CATALOG,
+  MATH_PER_GAME,
+  promptFor as mathPromptFor,
+  spokenFor,
+  type MathKind,
+  type MathProblem,
+} from "./math.ts";
+import { clearStage, renderStageFor } from "./math-stage.ts";
+import {
   choicesForWord,
   colorForWord,
   deckForWords,
@@ -23,8 +38,8 @@ import {
   type Word,
 } from "./words.ts";
 
-type ScreenName = "start" | "load" | "play" | "score";
-type Mode = "letters" | "words";
+type ScreenName = "start" | "math" | "load" | "play" | "score";
+type Mode = "letters" | "words" | "math";
 
 type LetterRound = {
   mode: "letters";
@@ -42,15 +57,27 @@ type WordRound = {
   answered: boolean;
 };
 
-type Round = LetterRound | WordRound;
+type MathRound = {
+  mode: "math";
+  problem: MathProblem;
+  choices: number[];
+  firstTry: boolean;
+  answered: boolean;
+};
+
+type Round = LetterRound | WordRound | MathRound;
 
 const els = {
   start: document.querySelector("#screen-start")!,
+  math: document.querySelector("#screen-math")!,
   load: document.querySelector("#screen-load")!,
-  play: document.querySelector("#screen-play")!,
+  play: document.querySelector<HTMLElement>("#screen-play")!,
   score: document.querySelector("#screen-score")!,
   lettersBtn: document.querySelector<HTMLButtonElement>("#letters-btn")!,
   wordsBtn: document.querySelector<HTMLButtonElement>("#words-btn")!,
+  mathBtn: document.querySelector<HTMLButtonElement>("#math-btn")!,
+  mathPicks: document.querySelector("#math-picks")!,
+  mathBackBtn: document.querySelector<HTMLButtonElement>("#math-back-btn")!,
   retryBtn: document.querySelector<HTMLButtonElement>("#retry-btn")!,
   againBtn: document.querySelector<HTMLButtonElement>("#again-btn")!,
   homeBtn: document.querySelector<HTMLButtonElement>("#home-btn")!,
@@ -61,6 +88,8 @@ const els = {
   scorechip: document.querySelector("#scorechip")!,
   prompt: document.querySelector("#prompt")!,
   face: document.querySelector<HTMLButtonElement>("#face")!,
+  playHint: document.querySelector("#play-hint")!,
+  stage: document.querySelector<HTMLElement>("#stage")!,
   choices: document.querySelector("#choices")!,
   finalScore: document.querySelector("#final-score")!,
   finalNote: document.querySelector("#final-note")!,
@@ -68,20 +97,26 @@ const els = {
 };
 
 let mode: Mode = "letters";
+let mathKind: MathKind = "plus";
 let letterDeck: Letter[] = [];
 let wordDeck: Word[] = [];
+let mathDeck: MathProblem[] = [];
 let index = 0;
 let correctFirstTries = 0;
 let round: Round | null = null;
 let booting = false;
+let peekRevealToken = 0;
 
 function totalRounds(): number {
-  return mode === "letters" ? ALPHABET.length : WORDS_PER_GAME;
+  if (mode === "letters") return ALPHABET.length;
+  if (mode === "words") return WORDS_PER_GAME;
+  return MATH_PER_GAME;
 }
 
 function show(screen: ScreenName): void {
   for (const [name, node] of Object.entries({
     start: els.start,
+    math: els.math,
     load: els.load,
     play: els.play,
     score: els.score,
@@ -89,6 +124,26 @@ function show(screen: ScreenName): void {
     const active = name === screen;
     node.classList.toggle("hidden", !active);
     node.setAttribute("aria-hidden", active ? "false" : "true");
+  }
+}
+
+function renderMathPicker(): void {
+  els.mathPicks.innerHTML = "";
+  for (const item of MATH_CATALOG) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "math-pick";
+    button.dataset.kind = item.kind;
+    button.innerHTML = `
+      <span class="vibe">${item.vibe}</span>
+      <span class="pick-title">${item.title}</span>
+      <p class="pick-blurb">${item.blurb}</p>
+    `;
+    button.addEventListener("click", () => {
+      void unlockAudio();
+      void bootMath(item.kind);
+    });
+    els.mathPicks.append(button);
   }
 }
 
@@ -102,7 +157,7 @@ function renderBeads(): void {
 }
 
 function renderLetterChoices(choices: Letter[], enabled: boolean): void {
-  els.choices.classList.remove("words");
+  els.choices.classList.remove("words", "math");
   els.choices.innerHTML = "";
   for (const letter of choices) {
     const button = document.createElement("button");
@@ -118,6 +173,7 @@ function renderLetterChoices(choices: Letter[], enabled: boolean): void {
 }
 
 function renderWordChoices(choices: string[], enabled: boolean): void {
+  els.choices.classList.remove("math");
   els.choices.classList.add("words");
   els.choices.innerHTML = "";
   for (const text of choices) {
@@ -130,6 +186,39 @@ function renderWordChoices(choices: string[], enabled: boolean): void {
     button.innerHTML = `<span>${text}</span>`;
     button.addEventListener("click", () => void onPickWord(text, button));
     els.choices.append(button);
+  }
+}
+
+function renderMathChoices(choices: number[], enabled: boolean): void {
+  els.choices.classList.remove("words");
+  els.choices.classList.add("math");
+  els.choices.innerHTML = "";
+  for (const value of choices) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `block number color-${colorForNumber(value)}`;
+    button.dataset.value = String(value);
+    button.setAttribute("aria-label", `Number ${value}`);
+    button.disabled = !enabled;
+    button.innerHTML = `<span>${value}</span>`;
+    button.addEventListener("click", () => void onPickMath(value, button));
+    els.choices.append(button);
+  }
+}
+
+function setPlayChrome(kind: MathKind | null): void {
+  if (kind) {
+    els.play.dataset.math = kind;
+    els.playHint.textContent =
+      kind === "taller"
+        ? "Tap a tower"
+        : kind === "peek"
+          ? "Watch close, then tap"
+          : "Tap the face to hear it again";
+  } else {
+    delete els.play.dataset.math;
+    els.playHint.textContent = "Tap the face to hear it again";
+    clearStage(els.stage);
   }
 }
 
@@ -159,7 +248,6 @@ async function speakWord(word: Word): Promise<void> {
   els.face.classList.add("thinking");
   els.prompt.textContent = "Listen…";
   try {
-    // Browser speech is instant for common words; Kokoro WASM takes 3–5s each.
     await speakBrowser(spokenWord(word), () => {
       els.face.classList.remove("thinking");
       els.face.classList.add("talking");
@@ -167,6 +255,21 @@ async function speakWord(word: Word): Promise<void> {
   } finally {
     els.face.classList.remove("thinking", "talking");
     if (round && !round.answered) els.prompt.textContent = "Tap the word.";
+  }
+}
+
+async function speakMathLine(problem: MathProblem, afterText: string): Promise<void> {
+  els.face.classList.add("thinking");
+  try {
+    await speakBrowser(spokenFor(problem), () => {
+      els.face.classList.remove("thinking");
+      els.face.classList.add("talking");
+    });
+  } finally {
+    els.face.classList.remove("thinking", "talking");
+    if (round && round.mode === "math" && !round.answered) {
+      els.prompt.textContent = afterText;
+    }
   }
 }
 
@@ -224,9 +327,172 @@ async function startWordRound(): Promise<void> {
   }
 }
 
+async function startPlusRound(problem: Extract<MathProblem, { kind: "plus" }>): Promise<void> {
+  round = {
+    mode: "math",
+    problem,
+    choices: mathChoicesFor(problem),
+    firstTry: true,
+    answered: false,
+  };
+  clearStage(els.stage);
+  renderMathChoices(round.choices, false);
+  els.face.disabled = true;
+  els.prompt.textContent = "Listen…";
+  try {
+    await speakMathLine(problem, mathPromptFor(problem));
+  } finally {
+    if (round && round.mode === "math" && !round.answered) {
+      renderMathChoices(round.choices, true);
+      els.face.disabled = false;
+    }
+  }
+}
+
+async function startPeekRound(problem: Extract<MathProblem, { kind: "peek" }>): Promise<void> {
+  const token = ++peekRevealToken;
+  round = {
+    mode: "math",
+    problem,
+    choices: mathChoicesFor(problem),
+    firstTry: true,
+    answered: false,
+  };
+  els.choices.innerHTML = "";
+  els.face.disabled = true;
+  els.prompt.textContent = "Peek…";
+  renderStageFor(els.stage, problem, { peekCovered: false });
+  await wait(1200);
+  if (token !== peekRevealToken || !round || round.answered) return;
+  renderStageFor(els.stage, problem, { peekCovered: true });
+  els.prompt.textContent = "How many?";
+  renderMathChoices(round.choices, false);
+  try {
+    await speakMathLine(problem, mathPromptFor(problem));
+  } finally {
+    if (round && round.mode === "math" && !round.answered && token === peekRevealToken) {
+      renderMathChoices(round.choices, true);
+      els.face.disabled = false;
+    }
+  }
+}
+
+async function startMunchRound(problem: Extract<MathProblem, { kind: "munch" }>): Promise<void> {
+  round = {
+    mode: "math",
+    problem,
+    choices: mathChoicesFor(problem),
+    firstTry: true,
+    answered: false,
+  };
+  renderMathChoices([], false);
+  els.choices.innerHTML = "";
+  els.face.disabled = true;
+  els.prompt.textContent = "Watch the cookies…";
+  renderStageFor(els.stage, problem, { munchPhase: "full" });
+  await speakMathLine(problem, mathPromptFor(problem));
+  if (!round || round.answered) return;
+  renderStageFor(els.stage, problem, { munchPhase: "eating" });
+  await wait(560);
+  if (!round || round.answered) return;
+  renderStageFor(els.stage, problem, { munchPhase: "left" });
+  renderMathChoices(round.choices, true);
+  els.face.disabled = false;
+  els.prompt.textContent = mathPromptFor(problem);
+}
+
+async function startTenRound(problem: Extract<MathProblem, { kind: "ten" }>): Promise<void> {
+  round = {
+    mode: "math",
+    problem,
+    choices: mathChoicesFor(problem),
+    firstTry: true,
+    answered: false,
+  };
+  renderStageFor(els.stage, problem);
+  renderMathChoices(round.choices, false);
+  els.face.disabled = true;
+  els.prompt.textContent = "Look at the frame…";
+  try {
+    await speakMathLine(problem, mathPromptFor(problem));
+  } finally {
+    if (round && round.mode === "math" && !round.answered) {
+      renderMathChoices(round.choices, true);
+      els.face.disabled = false;
+    }
+  }
+}
+
+async function startTallerRound(problem: Extract<MathProblem, { kind: "taller" }>): Promise<void> {
+  round = {
+    mode: "math",
+    problem,
+    choices: [],
+    firstTry: true,
+    answered: false,
+  };
+  els.choices.innerHTML = "";
+  els.face.disabled = true;
+  els.prompt.textContent = "Look…";
+  renderStageFor(els.stage, problem, {
+    tallerEnabled: false,
+    onTallerPick: (side, button) => void onPickTaller(side, button),
+  });
+  try {
+    await speakMathLine(problem, mathPromptFor(problem));
+  } finally {
+    if (round && round.mode === "math" && !round.answered) {
+      renderStageFor(els.stage, problem, {
+        tallerEnabled: true,
+        onTallerPick: (side, button) => void onPickTaller(side, button),
+      });
+      els.face.disabled = false;
+    }
+  }
+}
+
+async function startMathRound(): Promise<void> {
+  const problem = mathDeck[index];
+  if (!problem) {
+    finish();
+    return;
+  }
+  renderBeads();
+  els.scorechip.textContent = `${correctFirstTries} / ${MATH_PER_GAME}`;
+  setPlayChrome(problem.kind);
+
+  switch (problem.kind) {
+    case "plus":
+      await startPlusRound(problem);
+      break;
+    case "peek":
+      await startPeekRound(problem);
+      break;
+    case "munch":
+      await startMunchRound(problem);
+      break;
+    case "ten":
+      await startTenRound(problem);
+      break;
+    case "taller":
+      await startTallerRound(problem);
+      break;
+  }
+}
+
 async function startRound(): Promise<void> {
   if (mode === "letters") await startLetterRound();
-  else await startWordRound();
+  else if (mode === "words") await startWordRound();
+  else await startMathRound();
+}
+
+async function advanceMath(): Promise<void> {
+  index += 1;
+  if (index >= mathDeck.length) {
+    finish();
+    return;
+  }
+  await startMathRound();
 }
 
 async function onPickLetter(letter: Letter, button: HTMLButtonElement): Promise<void> {
@@ -295,9 +561,81 @@ async function onPickWord(text: string, button: HTMLButtonElement): Promise<void
   await startWordRound();
 }
 
+async function onPickMath(value: number, button: HTMLButtonElement): Promise<void> {
+  if (!round || round.mode !== "math" || round.answered) return;
+  if (round.problem.kind === "taller") return;
+  playTap();
+
+  if (value !== round.problem.answer) {
+    round.firstTry = false;
+    button.classList.add("wrong");
+    playWrong();
+    els.prompt.textContent = "Try again!";
+    window.setTimeout(() => {
+      button.classList.remove("wrong");
+      if (round && round.mode === "math" && !round.answered) {
+        els.prompt.textContent = mathPromptFor(round.problem);
+      }
+    }, 420);
+    return;
+  }
+
+  round.answered = true;
+  if (round.firstTry) correctFirstTries += 1;
+  button.classList.add("right");
+  for (const node of els.choices.querySelectorAll<HTMLButtonElement>("button")) {
+    node.disabled = true;
+  }
+  els.face.disabled = true;
+  playCorrect();
+  els.prompt.textContent = "Yes!";
+  const rect = button.getBoundingClientRect();
+  burst(rect.left + rect.width / 2, rect.top + rect.height / 2, String(value));
+  await wait(720);
+  await advanceMath();
+}
+
+async function onPickTaller(
+  side: "left" | "right",
+  button: HTMLButtonElement,
+): Promise<void> {
+  if (!round || round.mode !== "math" || round.answered) return;
+  if (round.problem.kind !== "taller") return;
+  playTap();
+
+  if (side !== round.problem.answer) {
+    round.firstTry = false;
+    button.classList.add("wrong");
+    playWrong();
+    els.prompt.textContent = "Try again!";
+    window.setTimeout(() => {
+      button.classList.remove("wrong");
+      if (round && round.mode === "math" && !round.answered) {
+        els.prompt.textContent = mathPromptFor(round.problem);
+      }
+    }, 420);
+    return;
+  }
+
+  round.answered = true;
+  if (round.firstTry) correctFirstTries += 1;
+  button.classList.add("right");
+  for (const node of els.stage.querySelectorAll<HTMLButtonElement>("button")) {
+    node.disabled = true;
+  }
+  els.face.disabled = true;
+  playCorrect();
+  els.prompt.textContent = "Yes!";
+  const rect = button.getBoundingClientRect();
+  burst(rect.left + rect.width / 2, rect.top + rect.height / 2, "▲");
+  await wait(720);
+  await advanceMath();
+}
+
 function finish(): void {
   stopSpeaking();
   stopBrowserSpeech();
+  peekRevealToken += 1;
   playFanfare();
   const score = correctFirstTries;
   const total = totalRounds();
@@ -315,7 +653,7 @@ function finish(): void {
     els.stars.innerHTML = Array.from({ length: 3 }, (_, i) =>
       `<span class="star ${i < starCount ? "on" : ""}">★</span>`,
     ).join("");
-  } else {
+  } else if (mode === "words") {
     els.finalNote.textContent =
       score === total
         ? "Every word on the first try!"
@@ -328,6 +666,12 @@ function finish(): void {
     els.stars.innerHTML = Array.from({ length: 3 }, (_, i) =>
       `<span class="star ${i < starCount ? "on" : ""}">★</span>`,
     ).join("");
+  } else {
+    els.finalNote.textContent = finishNote(mathKind, score, total);
+    const starCount = finishStars(score, total);
+    els.stars.innerHTML = Array.from({ length: 3 }, (_, i) =>
+      `<span class="star ${i < starCount ? "on" : ""}">★</span>`,
+    ).join("");
   }
   burst(window.innerWidth / 2, window.innerHeight / 3, "★");
   show("score");
@@ -337,10 +681,11 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-async function bootGame(nextMode: Mode): Promise<void> {
+async function bootGame(nextMode: "letters" | "words"): Promise<void> {
   if (booting) return;
   booting = true;
   mode = nextMode;
+  setPlayChrome(null);
   show("load");
   els.retryBtn.classList.add("hidden");
   els.loadError.classList.add("hidden");
@@ -348,6 +693,7 @@ async function bootGame(nextMode: Mode): Promise<void> {
     index = 0;
     correctFirstTries = 0;
     round = null;
+    mathDeck = [];
     if (mode === "letters") {
       await loadVoice(({ label, percent }) => {
         els.progressLabel.textContent = label;
@@ -388,6 +734,43 @@ async function bootGame(nextMode: Mode): Promise<void> {
   }
 }
 
+async function bootMath(kind: MathKind): Promise<void> {
+  if (booting) return;
+  booting = true;
+  mode = "math";
+  mathKind = kind;
+  show("load");
+  els.retryBtn.classList.add("hidden");
+  els.loadError.classList.add("hidden");
+  try {
+    index = 0;
+    correctFirstTries = 0;
+    round = null;
+    letterDeck = [];
+    wordDeck = [];
+    const title = catalogFor(kind).title;
+    els.progressLabel.textContent = `Warming up ${title}…`;
+    els.progressFill.style.width = "40%";
+    await prepareBrowserSpeech();
+    els.progressFill.style.width = "100%";
+    mathDeck = deckFor(kind);
+    if (!mathDeck[0]) throw new Error("Math deck is empty.");
+    setPlayChrome(kind);
+    show("play");
+    await startRound();
+  } catch {
+    els.loadError.textContent =
+      "The voice could not start. Try Chrome or Edge, then try again.";
+    els.loadError.classList.remove("hidden");
+    els.retryBtn.classList.remove("hidden");
+    els.progressLabel.textContent = "Need a little help.";
+  } finally {
+    booting = false;
+  }
+}
+
+renderMathPicker();
+
 els.lettersBtn.addEventListener("click", () => {
   void unlockAudio();
   void bootGame("letters");
@@ -398,23 +781,39 @@ els.wordsBtn.addEventListener("click", () => {
   void bootGame("words");
 });
 
+els.mathBtn.addEventListener("click", () => {
+  void unlockAudio();
+  show("math");
+});
+
+els.mathBackBtn.addEventListener("click", () => {
+  show("start");
+});
+
 els.retryBtn.addEventListener("click", () => {
-  void bootGame(mode);
+  if (mode === "math") void bootMath(mathKind);
+  else void bootGame(mode);
 });
 
 els.againBtn.addEventListener("click", () => {
   void unlockAudio();
-  void bootGame(mode);
+  if (mode === "math") void bootMath(mathKind);
+  else void bootGame(mode);
 });
 
 els.homeBtn.addEventListener("click", () => {
   stopSpeaking();
   stopBrowserSpeech();
-  show("start");
+  peekRevealToken += 1;
+  clearStage(els.stage);
+  setPlayChrome(null);
+  if (mode === "math") show("math");
+  else show("start");
 });
 
 els.face.addEventListener("click", () => {
   if (!round || round.answered) return;
   if (round.mode === "letters") void speakLetter(round.letter);
-  else void speakWord(round.word);
+  else if (round.mode === "words") void speakWord(round.word);
+  else void speakMathLine(round.problem, mathPromptFor(round.problem));
 });

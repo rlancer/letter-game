@@ -18,18 +18,27 @@
 
     <main id="app">
       <section id="screen-start" class="screen" aria-hidden="false">
-        <p class="eyebrow">Listening &amp; reading games</p>
+        <p class="eyebrow">Listening, reading &amp; math games</p>
         <h1>Letter Blocks</h1>
-        <p class="lede">Pick a game. Listen. Then tap what you heard.</p>
+        <p class="lede">Pick a game. Listen. Then tap the answer.</p>
         <div class="start-actions">
           <button id="letters-btn" class="btn primary" type="button">Letters</button>
           <button id="words-btn" class="btn primary words-btn" type="button">Reading</button>
+          <button id="math-btn" class="btn primary math-btn" type="button">Math</button>
         </div>
-        <p class="mode-note">Letters: A–Z blocks &nbsp;·&nbsp; Reading: pick the word you hear</p>
+        <p class="mode-note">Letters: A–Z &nbsp;·&nbsp; Reading: words &nbsp;·&nbsp; Math: five mini-games</p>
         <p class="dock-links">
           <a class="dock-link" href="./admin.html">Letter keys</a>
           <a class="dock-link" href="./admin-words.html">Word voice</a>
         </p>
+      </section>
+
+      <section id="screen-math" class="screen hidden" aria-hidden="true">
+        <p class="eyebrow">Math playground</p>
+        <h1 class="math-title">Pick a challenge</h1>
+        <p class="lede math-lede">Each one plays differently. No two the same.</p>
+        <div id="math-picks" class="math-picks"></div>
+        <button id="math-back-btn" class="btn ghost" type="button">Back</button>
       </section>
 
       <section id="screen-load" class="screen hidden" aria-hidden="true">
@@ -61,7 +70,8 @@
           <span class="cheek right"></span>
           <span class="mouth"></span>
         </button>
-        <p class="hint">Tap the face to hear it again</p>
+        <p class="hint" id="play-hint">Tap the face to hear it again</p>
+        <div id="stage" class="math-stage" hidden></div>
         <div id="choices" class="choices"></div>
       </section>
 
