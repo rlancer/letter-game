@@ -31,4 +31,12 @@ export default defineConfig({
   worker: {
     format: "es",
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.join(root, "index.html"),
+        admin: path.join(root, "admin.html"),
+      },
+    },
+  },
 });

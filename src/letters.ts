@@ -37,7 +37,7 @@ const LETTER_PHONEMES: Record<Letter, string> = {
   C: "sˈiː",
   D: "dˈiː",
   E: "ˈiː",
-  F: "ˈɛf",
+  F: "ˈɛfə",
   G: "ʤˈiː",
   H: "ˈAʧ",
   I: "ˈI",
@@ -83,9 +83,19 @@ const CONFUSABLES: Partial<Record<Letter, Letter[]>> = {
 const BLOCK_COLORS = ["tomato", "ultramarine", "grape", "grass"] as const;
 export type BlockColor = (typeof BLOCK_COLORS)[number];
 
+export function phonemesFor(letter: Letter): string {
+  return LETTER_PHONEMES[letter];
+}
+
+// Comma is a pause so "letter" does not glue an extra R onto A, E, I, O, R.
+export const PROMPT_INTRO = "fˈInd ðə lˈɛɾɚ,";
+
+export function promptFrom(namePhonemes: string): string {
+  return `${PROMPT_INTRO} ${namePhonemes}.`;
+}
+
 export function promptFor(letter: Letter): string {
-  // Comma is a pause so "letter" does not glue an extra R onto A, E, I, O, R.
-  return `fˈInd ðə lˈɛɾɚ, ${LETTER_PHONEMES[letter]}.`;
+  return promptFrom(LETTER_PHONEMES[letter]);
 }
 
 export function colorFor(letter: Letter): BlockColor {

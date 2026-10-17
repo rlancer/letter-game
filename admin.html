@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#3D7BFF" />
+    <title>Voice keys · Letter Blocks</title>
+  </head>
+  <body class="admin">
+    <div class="sky" aria-hidden="true">
+      <span class="cloud c1"></span>
+      <span class="cloud c2"></span>
+      <span class="cloud c3"></span>
+    </div>
+    <div class="hill" aria-hidden="true"></div>
+
+    <main id="app">
+      <section class="screen admin-screen" aria-labelledby="admin-title">
+        <p class="eyebrow">A to Z pronunciation</p>
+        <h1 id="admin-title">Voice keys</h1>
+        <p class="lede admin-lede">
+          Each key is what Kokoro speaks for that letter. Tap Hear to preview. Edits stay on this page until you paste them into the game.
+        </p>
+
+        <div class="admin-toolbar">
+          <label class="mode-toggle">
+            <input id="full-line" type="checkbox" checked />
+            Full line
+          </label>
+          <button id="copy-keys" class="btn ghost" type="button">Copy keys</button>
+          <a class="btn ghost admin-back" href="./">Game</a>
+        </div>
+
+        <p id="admin-status" class="admin-status">Waking up the voice…</p>
+        <div class="meter hidden" id="admin-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+          <span id="admin-fill"></span>
+        </div>
+        <p id="admin-error" class="error hidden"></p>
+
+        <aside class="mark-guide" aria-labelledby="mark-title">
+          <h2 id="mark-title">What the marks mean</h2>
+          <p class="mark-note">Plain letters sound the way they look. <code>j</code> is the y in yes, not the letter J.</p>
+          <dl class="mark-list">
+            <div><dt>ˈ</dt><dd>Stress. The next sound is the loud one.</dd></div>
+            <div><dt>ˌ</dt><dd>Softer stress, like the second beat in W.</dd></div>
+            <div><dt>ː</dt><dd>Hold the vowel, like the ee in B.</dd></div>
+            <div><dt>A</dt><dd>Ay, as in day.</dd></div>
+            <div><dt>I</dt><dd>Eye, as in high.</dd></div>
+            <div><dt>O</dt><dd>Oh, as in go.</dd></div>
+            <div><dt>ɛ</dt><dd>Eh, as in bed.</dd></div>
+            <div><dt>ə</dt><dd>Quiet uh, as in the end of sofa.</dd></div>
+            <div><dt>ʌ</dt><dd>Uh, as in cup.</dd></div>
+            <div><dt>ɑ</dt><dd>Ah, as in spa.</dd></div>
+            <div><dt>ʤ</dt><dd>J, as in jump.</dd></div>
+            <div><dt>ʧ</dt><dd>Ch, as in chip.</dd></div>
+            <div><dt>ɹ</dt><dd>R, as in red.</dd></div>
+          </dl>
+        </aside>
+
+        <div id="key-list" class="key-list"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/admin.ts"></script>
+  </body>
+</html>

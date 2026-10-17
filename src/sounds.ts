@@ -5,9 +5,13 @@ export async function unlockAudio(): Promise<void> {
   if (audio.state === "suspended") await audio.resume();
 }
 
-function getContext(): AudioContext {
+export function sharedAudioContext(): AudioContext {
   ctx ??= new AudioContext();
   return ctx;
+}
+
+function getContext(): AudioContext {
+  return sharedAudioContext();
 }
 
 function tone(

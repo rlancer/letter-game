@@ -18,10 +18,15 @@
 
     <main id="app">
       <section id="screen-start" class="screen" aria-hidden="false">
-        <p class="eyebrow">A to Z listening game</p>
+        <p class="eyebrow">Listening &amp; reading games</p>
         <h1>Letter Blocks</h1>
-        <p class="lede">Listen. Then tap the letter you heard.</p>
-        <button id="play-btn" class="btn primary" type="button">Play</button>
+        <p class="lede">Pick a game. Listen. Then tap what you heard.</p>
+        <div class="start-actions">
+          <button id="letters-btn" class="btn primary" type="button">Letters</button>
+          <button id="words-btn" class="btn primary words-btn" type="button">Reading</button>
+        </div>
+        <p class="mode-note">Letters: A–Z blocks &nbsp;·&nbsp; Reading: pick the word you hear</p>
+        <a class="dock-link" href="./admin.html">Voice keys</a>
       </section>
 
       <section id="screen-load" class="screen hidden" aria-hidden="true">
@@ -62,7 +67,10 @@
         <div id="stars" aria-hidden="true"></div>
         <h2 id="final-score">0 / 26</h2>
         <p id="final-note">Great listening.</p>
-        <button id="again-btn" class="btn primary" type="button">Play again</button>
+        <div class="start-actions">
+          <button id="again-btn" class="btn primary" type="button">Play again</button>
+          <button id="home-btn" class="btn ghost" type="button">Other game</button>
+        </div>
       </section>
     </main>
 
