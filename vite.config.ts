@@ -36,6 +36,7 @@ export default defineConfig({
       input: {
         main: path.join(root, "index.html"),
         admin: path.join(root, "admin.html"),
+        adminWords: path.join(root, "admin-words.html"),
       },
     },
   },

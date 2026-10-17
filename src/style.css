@@ -565,8 +565,16 @@ h2 {
   }
 }
 
+.dock-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 18px;
+  margin: 4px 0 0;
+}
+
 .dock-link {
-  margin-top: 4px;
+  margin-top: 0;
   color: var(--paper);
   text-shadow: 2px 2px 0 var(--ink);
   font-size: 0.9rem;
@@ -745,6 +753,27 @@ body.admin #app {
   font-size: 1.85rem;
 }
 
+.key-row.word-key-row {
+  grid-template-columns: 108px minmax(0, 1fr) auto;
+}
+
+.key-row.word-key-row .block.word {
+  width: 108px;
+  aspect-ratio: 1.45;
+}
+
+.key-row.word-key-row .block.word span {
+  font-size: 1.15rem;
+  letter-spacing: 0.03em;
+  text-transform: lowercase;
+}
+
+.word-spoken {
+  margin: 0;
+  font-size: 1.1rem;
+  text-align: left;
+}
+
 .key-input {
   width: 100%;
   min-width: 0;
@@ -778,6 +807,10 @@ body.admin #app {
 
   .key-row {
     grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .key-row.word-key-row {
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .btn.hear {

@@ -2,42 +2,45 @@ import { shuffle, type BlockColor } from "./letters.ts";
 
 export type Word = {
   text: string;
-  phonemes: string;
   confusable: string[];
 };
 
-// Early-reader words with Misaki US phonemes (same alphabet Kokoro expects).
+// Early-reader words. Spoken as plain English (Kokoro + eSpeak know these).
 export const WORDS: readonly Word[] = [
-  { text: "cat", phonemes: "kˈæt", confusable: ["bat", "hat", "mat"] },
-  { text: "dog", phonemes: "dˈɔɡ", confusable: ["dig", "log", "fog"] },
-  { text: "sun", phonemes: "sˈʌn", confusable: ["fun", "run", "bun"] },
-  { text: "pig", phonemes: "pˈɪɡ", confusable: ["big", "dig", "pin"] },
-  { text: "bed", phonemes: "bˈɛd", confusable: ["red", "bad", "beg"] },
-  { text: "cup", phonemes: "kˈʌp", confusable: ["cap", "cut", "pup"] },
-  { text: "hat", phonemes: "hˈæt", confusable: ["hot", "bat", "ham"] },
-  { text: "fish", phonemes: "fˈɪʃ", confusable: ["dish", "wish", "fist"] },
-  { text: "bird", phonemes: "bˈɚd", confusable: ["burn", "bard", "hard"] },
-  { text: "tree", phonemes: "tɹˈiː", confusable: ["free", "three", "tee"] },
-  { text: "ball", phonemes: "bˈɔl", confusable: ["bell", "tall", "call"] },
-  { text: "moon", phonemes: "mˈuːn", confusable: ["soon", "moan", "noon"] },
-  { text: "star", phonemes: "stˈɑɹ", confusable: ["stir", "scar", "start"] },
-  { text: "book", phonemes: "bˈʊk", confusable: ["look", "boot", "cook"] },
-  { text: "frog", phonemes: "fɹˈɔɡ", confusable: ["fog", "from", "dog"] },
-  { text: "cake", phonemes: "kˈeɪk", confusable: ["lake", "cape", "bake"] },
-  { text: "duck", phonemes: "dˈʌk", confusable: ["deck", "dark", "luck"] },
-  { text: "ship", phonemes: "ʃˈɪp", confusable: ["shop", "chip", "sip"] },
-  { text: "hand", phonemes: "hˈænd", confusable: ["hard", "land", "sand"] },
-  { text: "jump", phonemes: "ʤˈʌmp", confusable: ["bump", "just", "dump"] },
+  { text: "cat", confusable: ["bat", "hat", "mat"] },
+  { text: "dog", confusable: ["dig", "log", "fog"] },
+  { text: "sun", confusable: ["fun", "run", "bun"] },
+  { text: "pig", confusable: ["big", "dig", "pin"] },
+  { text: "bed", confusable: ["red", "bad", "beg"] },
+  { text: "cup", confusable: ["cap", "cut", "pup"] },
+  { text: "hat", confusable: ["hot", "bat", "ham"] },
+  { text: "fish", confusable: ["dish", "wish", "fist"] },
+  { text: "bird", confusable: ["burn", "bard", "hard"] },
+  { text: "tree", confusable: ["free", "three", "tee"] },
+  { text: "ball", confusable: ["bell", "tall", "call"] },
+  { text: "moon", confusable: ["soon", "moan", "noon"] },
+  { text: "star", confusable: ["stir", "scar", "start"] },
+  { text: "book", confusable: ["look", "boot", "cook"] },
+  { text: "frog", confusable: ["fog", "from", "dog"] },
+  { text: "cake", confusable: ["lake", "cape", "bake"] },
+  { text: "duck", confusable: ["deck", "dark", "luck"] },
+  { text: "ship", confusable: ["shop", "chip", "sip"] },
+  { text: "hand", confusable: ["hard", "land", "sand"] },
+  { text: "jump", confusable: ["bump", "just", "dump"] },
 ];
 
 export const WORDS_PER_GAME = 10;
 
 const BLOCK_COLORS = ["tomato", "ultramarine", "grape", "grass"] as const;
 
-export const WORD_PROMPT_INTRO = "fˈInd ðə wˈɚd,";
+export const WORD_PROMPT_INTRO = "Find the word,";
+
+export function spokenWord(word: Word): string {
+  return word.text;
+}
 
 export function promptForWord(word: Word): string {
-  return `${WORD_PROMPT_INTRO} ${word.phonemes}.`;
+  return `${WORD_PROMPT_INTRO} ${word.text}.`;
 }
 
 export function colorForWord(text: string): BlockColor {

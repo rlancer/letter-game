@@ -18,10 +18,17 @@ type Waiter = {
   reject: (error: unknown) => void;
 };
 
+type SpeechKind = "phonemes" | "text";
+
 type Slot = {
-  phonemes: string;
+  kind: SpeechKind;
+  value: string;
   urgent: boolean;
 };
+
+function cacheKey(kind: SpeechKind, value: string): string {
+  return `${kind}:${value}`;
+}
 
 let tts: KokoroTTS | null = null;
 let cancelPlay: (() => void) | null = null;
@@ -93,9 +100,13 @@ export async function loadVoice(onProgress: (progress: LoadProgress) => void): P
   onProgress({ label: "Voice is ready!", percent: 100 });
 }
 
-async function synthesize(phonemes: string) {
+async function synthesize(slot: Slot) {
   if (!tts) throw new Error("Voice is not ready yet.");
-  const { input_ids } = tts.tokenizer(phonemes, { truncation: true });
+  if (slot.kind === "text") {
+    // Plain English — eSpeak knows common words. Letter names still use phonemes.
+    return tts.generate(slot.value, { voice: VOICE, speed: SPEED });
+  }
+  const { input_ids } = tts.tokenizer(slot.value, { truncation: true });
   return tts.generate_from_ids(input_ids, { voice: VOICE, speed: SPEED });
 }
 
@@ -109,8 +120,8 @@ function insert(slot: Slot): void {
   else queue.splice(firstBackground, 0, slot);
 }
 
-function promote(phonemes: string): void {
-  const index = queue.findIndex((slot) => slot.phonemes === phonemes);
+function promote(kind: SpeechKind, value: string): void {
+  const index = queue.findIndex((slot) => slot.kind === kind && slot.value === value);
   if (index < 0) return;
   const slot = queue[index];
   if (!slot || slot.urgent) return;
@@ -119,20 +130,21 @@ function promote(phonemes: string): void {
   insert(slot);
 }
 
-function enqueue(phonemes: string, urgent: boolean): Promise<ArrayBuffer> {
-  const cached = clipCache.get(phonemes);
+function enqueue(kind: SpeechKind, value: string, urgent: boolean): Promise<ArrayBuffer> {
+  const key = cacheKey(kind, value);
+  const cached = clipCache.get(key);
   if (cached) return Promise.resolve(cached);
 
   return new Promise((resolve, reject) => {
     const waiter = { resolve, reject };
-    const existing = groups.get(phonemes);
+    const existing = groups.get(key);
     if (existing) {
       existing.push(waiter);
-      if (urgent) promote(phonemes);
+      if (urgent) promote(kind, value);
       return;
     }
-    groups.set(phonemes, [waiter]);
-    insert({ phonemes, urgent });
+    groups.set(key, [waiter]);
+    insert({ kind, value, urgent });
     void pump();
   });
 }
@@ -144,16 +156,17 @@ async function pump(): Promise<void> {
     while (queue.length > 0) {
       const slot = queue.shift();
       if (!slot) break;
-      const waiters = groups.get(slot.phonemes) ?? [];
+      const key = cacheKey(slot.kind, slot.value);
+      const waiters = groups.get(key) ?? [];
       try {
-        const audio = await synthesize(slot.phonemes);
+        const audio = await synthesize(slot);
         const bytes = await audio.toBlob().arrayBuffer();
-        clipCache.set(slot.phonemes, bytes);
+        clipCache.set(key, bytes);
         for (const waiter of waiters) waiter.resolve(bytes);
       } catch (error) {
         for (const waiter of waiters) waiter.reject(error);
       } finally {
-        groups.delete(slot.phonemes);
+        groups.delete(key);
       }
     }
   } finally {
@@ -208,13 +221,17 @@ async function playUrl(bytes: ArrayBuffer, token: number, onStart?: () => void):
 }
 
 export async function prepareSpeech(phonemes: string): Promise<void> {
-  await enqueue(phonemes, true);
+  await enqueue("phonemes", phonemes, true);
+}
+
+export async function prepareText(text: string): Promise<void> {
+  await enqueue("text", text, true);
 }
 
 export async function speakParts(parts: string[], onStart?: () => void): Promise<void> {
   const token = (speakToken += 1);
   stopSpeaking();
-  const pending = parts.map((part) => enqueue(part, true));
+  const pending = parts.map((part) => enqueue("phonemes", part, true));
   for (let index = 0; index < pending.length; index += 1) {
     const bytes = await pending[index];
     if (token !== speakToken) return;
@@ -227,11 +244,23 @@ export async function speak(phonemes: string, onStart?: () => void): Promise<voi
   await speakParts([phonemes], onStart);
 }
 
+export async function speakText(text: string, onStart?: () => void): Promise<void> {
+  const token = (speakToken += 1);
+  stopSpeaking();
+  const bytes = await enqueue("text", text, true);
+  if (token !== speakToken) return;
+  await playUrl(bytes, token, onStart);
+}
+
 export function stopSpeaking(): void {
   cancelPlay?.();
   cancelPlay = null;
 }
 
 export function prefetch(phonemes: string): void {
-  void enqueue(phonemes, false);
+  void enqueue("phonemes", phonemes, false);
+}
+
+export function prefetchText(text: string): void {
+  void enqueue("text", text, false);
 }

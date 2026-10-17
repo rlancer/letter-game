@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#3D7BFF" />
+    <title>Word voice · Letter Blocks</title>
+  </head>
+  <body class="admin">
+    <div class="sky" aria-hidden="true">
+      <span class="cloud c1"></span>
+      <span class="cloud c2"></span>
+      <span class="cloud c3"></span>
+    </div>
+    <div class="hill" aria-hidden="true"></div>
+
+    <main id="app">
+      <section class="screen admin-screen" aria-labelledby="admin-title">
+        <p class="eyebrow">Reading pronunciations</p>
+        <h1 id="admin-title">Word voice</h1>
+        <p class="lede admin-lede">
+          Reading mode speaks plain English. Tap Hear to preview how each word sounds.
+        </p>
+
+        <div class="admin-toolbar">
+          <label class="mode-toggle">
+            <input id="full-line" type="checkbox" checked />
+            Full line
+          </label>
+          <a class="btn ghost admin-back" href="./admin.html">Letters</a>
+          <a class="btn ghost admin-back" href="./">Game</a>
+        </div>
+
+        <p id="admin-status" class="admin-status">Waking up the voice…</p>
+        <div class="meter hidden" id="admin-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+          <span id="admin-fill"></span>
+        </div>
+        <p id="admin-error" class="error hidden"></p>
+
+        <div id="key-list" class="key-list"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/admin-words.ts"></script>
+  </body>
+</html>

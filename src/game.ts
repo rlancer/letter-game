@@ -8,7 +8,16 @@ import {
   type Letter,
 } from "./letters.ts";
 import { playCorrect, playFanfare, playTap, playWrong, unlockAudio } from "./sounds.ts";
-import { loadVoice, prefetch, prepareSpeech, speak, stopSpeaking } from "./tts.ts";
+import {
+  loadVoice,
+  prefetch,
+  prefetchText,
+  prepareSpeech,
+  prepareText,
+  speak,
+  speakText,
+  stopSpeaking,
+} from "./tts.ts";
 import {
   choicesForWord,
   colorForWord,
@@ -149,10 +158,10 @@ async function speakWord(word: Word): Promise<void> {
   els.prompt.textContent = "Listen…";
   try {
     const next = wordDeck[index + 1];
-    await speak(promptForWord(word), () => {
+    await speakText(promptForWord(word), () => {
       els.face.classList.remove("thinking");
       els.face.classList.add("talking");
-      if (next) prefetch(promptForWord(next));
+      if (next) prefetchText(promptForWord(next));
     });
   } finally {
     els.face.classList.remove("thinking", "talking");
@@ -348,7 +357,7 @@ async function bootGame(nextMode: Mode): Promise<void> {
       const first = wordDeck[0];
       if (!first) throw new Error("Word list is empty.");
       els.progressLabel.textContent = "Practicing the first word…";
-      await prepareSpeech(promptForWord(first));
+      await prepareText(promptForWord(first));
     }
     show("play");
     await startRound();
