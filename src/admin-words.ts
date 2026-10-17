@@ -1,8 +1,12 @@
 import "@fontsource/nunito/700.css";
 import "@fontsource/nunito/800.css";
 import "@fontsource/titan-one";
+import {
+  prepareBrowserSpeech,
+  speakBrowser,
+  stopBrowserSpeech,
+} from "./browser-speech.ts";
 import { unlockAudio } from "./sounds.ts";
-import { loadVoice, speakText, stopSpeaking } from "./tts.ts";
 import {
   WORDS,
   colorForWord,
@@ -45,7 +49,7 @@ function renderList(): void {
 
     const label = document.createElement("p");
     label.className = "word-spoken";
-    label.textContent = promptForWord(word);
+    label.textContent = lineFor(word);
 
     const hear = document.createElement("button");
     hear.type = "button";
@@ -77,10 +81,10 @@ async function ensureVoice(): Promise<void> {
   }
   meter.classList.remove("hidden");
   errorBox.classList.add("hidden");
-  booting = loadVoice(({ label, percent }) => {
-    setStatus(label);
-    fill.style.width = `${percent}%`;
-  }).then(() => {
+  fill.style.width = "35%";
+  setStatus("Getting the word voice ready…");
+  booting = prepareBrowserSpeech().then(() => {
+    fill.style.width = "100%";
     meter.classList.add("hidden");
     setStatus("Voice is ready. Tap Hear on any word.");
   });
@@ -89,10 +93,10 @@ async function ensureVoice(): Promise<void> {
   } catch (error) {
     booting = null;
     meter.classList.add("hidden");
-    const missing = error instanceof Error && error.message === "missing-model";
-    errorBox.textContent = missing
-      ? "The letter voice is not downloaded yet. In a terminal, run mise run setup."
-      : "The letter voice could not start. Check the browser console, then try again.";
+    errorBox.textContent =
+      error instanceof Error
+        ? error.message
+        : "The word voice could not start. Try Chrome or Edge.";
     errorBox.classList.remove("hidden");
     setStatus("Need a little help.");
     throw error;
@@ -114,9 +118,9 @@ async function playWord(word: Word): Promise<void> {
   }
   markSpeaking(word.text);
   const line = lineFor(word);
-  setStatus(`Preparing ${word.text}…`);
+  setStatus(`Speaking ${word.text}…`);
   try {
-    await speakText(line, () => {
+    await speakBrowser(line, () => {
       if (speaking === word.text) setStatus(`Speaking ${word.text}…`);
     });
   } catch (error) {
@@ -136,7 +140,7 @@ fullLine.addEventListener("change", () => {
 });
 
 window.addEventListener("pagehide", () => {
-  stopSpeaking();
+  stopBrowserSpeech();
 });
 
 renderList();

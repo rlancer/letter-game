@@ -7,22 +7,18 @@ import {
   shuffle,
   type Letter,
 } from "./letters.ts";
-import { playCorrect, playFanfare, playTap, playWrong, unlockAudio } from "./sounds.ts";
 import {
-  loadVoice,
-  prefetch,
-  prefetchText,
-  prepareSpeech,
-  prepareText,
-  speak,
-  speakText,
-  stopSpeaking,
-} from "./tts.ts";
+  prepareBrowserSpeech,
+  speakBrowser,
+  stopBrowserSpeech,
+} from "./browser-speech.ts";
+import { playCorrect, playFanfare, playTap, playWrong, unlockAudio } from "./sounds.ts";
+import { loadVoice, prefetch, prepareSpeech, speak, stopSpeaking } from "./tts.ts";
 import {
   choicesForWord,
   colorForWord,
   deckForWords,
-  promptForWord,
+  spokenWord,
   WORDS_PER_GAME,
   type Word,
 } from "./words.ts";
@@ -137,15 +133,21 @@ function renderWordChoices(choices: string[], enabled: boolean): void {
   }
 }
 
+function prefetchLetterAhead(fromIndex: number, count = 2): void {
+  for (let offset = 1; offset <= count; offset += 1) {
+    const letter = letterDeck[fromIndex + offset];
+    if (letter) prefetch(promptFor(letter));
+  }
+}
+
 async function speakLetter(letter: Letter): Promise<void> {
   els.face.classList.add("thinking");
   els.prompt.textContent = "Listen…";
   try {
-    const next = letterDeck[index + 1];
     await speak(promptFor(letter), () => {
       els.face.classList.remove("thinking");
       els.face.classList.add("talking");
-      if (next) prefetch(promptFor(next));
+      prefetchLetterAhead(index, 2);
     });
   } finally {
     els.face.classList.remove("thinking", "talking");
@@ -157,11 +159,10 @@ async function speakWord(word: Word): Promise<void> {
   els.face.classList.add("thinking");
   els.prompt.textContent = "Listen…";
   try {
-    const next = wordDeck[index + 1];
-    await speakText(promptForWord(word), () => {
+    // Browser speech is instant for common words; Kokoro WASM takes 3–5s each.
+    await speakBrowser(spokenWord(word), () => {
       els.face.classList.remove("thinking");
       els.face.classList.add("talking");
-      if (next) prefetchText(promptForWord(next));
     });
   } finally {
     els.face.classList.remove("thinking", "talking");
@@ -186,10 +187,13 @@ async function startLetterRound(): Promise<void> {
   els.scorechip.textContent = `${correctFirstTries} / ${ALPHABET.length}`;
   renderLetterChoices(round.choices, false);
   els.face.disabled = true;
-  await speakLetter(letter);
-  if (!round.answered) {
-    renderLetterChoices(round.choices, true);
-    els.face.disabled = false;
+  try {
+    await speakLetter(letter);
+  } finally {
+    if (round && round.mode === "letters" && !round.answered) {
+      renderLetterChoices(round.choices, true);
+      els.face.disabled = false;
+    }
   }
 }
 
@@ -210,10 +214,13 @@ async function startWordRound(): Promise<void> {
   els.scorechip.textContent = `${correctFirstTries} / ${WORDS_PER_GAME}`;
   renderWordChoices(round.choices, false);
   els.face.disabled = true;
-  await speakWord(word);
-  if (!round.answered) {
-    renderWordChoices(round.choices, true);
-    els.face.disabled = false;
+  try {
+    await speakWord(word);
+  } finally {
+    if (round && round.mode === "words" && !round.answered) {
+      renderWordChoices(round.choices, true);
+      els.face.disabled = false;
+    }
   }
 }
 
@@ -290,6 +297,7 @@ async function onPickWord(text: string, button: HTMLButtonElement): Promise<void
 
 function finish(): void {
   stopSpeaking();
+  stopBrowserSpeech();
   playFanfare();
   const score = correctFirstTries;
   const total = totalRounds();
@@ -337,35 +345,41 @@ async function bootGame(nextMode: Mode): Promise<void> {
   els.retryBtn.classList.add("hidden");
   els.loadError.classList.add("hidden");
   try {
-    await loadVoice(({ label, percent }) => {
-      els.progressLabel.textContent = label;
-      els.progressFill.style.width = `${percent}%`;
-    });
     index = 0;
     correctFirstTries = 0;
     round = null;
     if (mode === "letters") {
+      await loadVoice(({ label, percent }) => {
+        els.progressLabel.textContent = label;
+        els.progressFill.style.width = `${percent}%`;
+      });
       letterDeck = shuffle(ALPHABET);
       wordDeck = [];
       const first = letterDeck[0];
       if (!first) throw new Error("Alphabet is empty.");
       els.progressLabel.textContent = "Practicing the first letter…";
       await prepareSpeech(promptFor(first));
+      prefetchLetterAhead(0, 3);
+      show("play");
+      await startRound();
     } else {
+      els.progressLabel.textContent = "Getting the word voice ready…";
+      els.progressFill.style.width = "40%";
+      await prepareBrowserSpeech();
+      els.progressFill.style.width = "100%";
       wordDeck = deckForWords();
       letterDeck = [];
-      const first = wordDeck[0];
-      if (!first) throw new Error("Word list is empty.");
-      els.progressLabel.textContent = "Practicing the first word…";
-      await prepareText(promptForWord(first));
+      if (!wordDeck[0]) throw new Error("Word list is empty.");
+      show("play");
+      await startRound();
     }
-    show("play");
-    await startRound();
   } catch (error) {
     const missing = error instanceof Error && error.message === "missing-model";
     els.loadError.textContent = missing
       ? "The letter voice is not downloaded yet. In a terminal, run mise run setup."
-      : "The letter voice could not start. Check the browser console, then try again.";
+      : mode === "words"
+        ? "The word voice could not start. Try Chrome or Edge, then try again."
+        : "The letter voice could not start. Check the browser console, then try again.";
     els.loadError.classList.remove("hidden");
     els.retryBtn.classList.remove("hidden");
     els.progressLabel.textContent = "Need a little help.";
@@ -395,6 +409,7 @@ els.againBtn.addEventListener("click", () => {
 
 els.homeBtn.addEventListener("click", () => {
   stopSpeaking();
+  stopBrowserSpeech();
   show("start");
 });
 
