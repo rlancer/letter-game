@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "fetch-model": "node scripts/fetch-model.mjs",
     "setup": "npm install && node scripts/fetch-model.mjs",
-    "deploy": "tsc && cf deploy"
+    "deploy": "tsc && cf deploy --mode production",
+    "deploy:staging": "tsc && cf deploy --mode staging"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.v.1",
