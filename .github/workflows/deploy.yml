@@ -23,6 +23,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Copy the ONNX runtime
+        run: node scripts/fetch-model.mjs --runtime-only
 
       - name: Check the build
         if: github.event_name == 'pull_request'

@@ -99,12 +99,21 @@ async function copyOrtRuntime() {
 }
 
 async function main() {
-  console.log("Downloading local Kokoro TTS files…");
-  for (const file of FILES) {
-    await download(file.url, file.dest, file.expectedBytes);
+  const runtimeOnly = process.argv.includes("--runtime-only");
+  if (runtimeOnly) {
+    console.log("Copying the ONNX runtime used by the build…");
+  } else {
+    console.log("Downloading local Kokoro TTS files…");
+    for (const file of FILES) {
+      await download(file.url, file.dest, file.expectedBytes);
+    }
   }
   await copyOrtRuntime();
-  console.log("TTS model is ready in public/models, public/voices, and src/assets/ort.");
+  console.log(
+    runtimeOnly
+      ? "ONNX runtime is ready in src/assets/ort."
+      : "TTS model is ready in public/models, public/voices, and src/assets/ort.",
+  );
 }
 
 main().catch((error) => {
